@@ -35,7 +35,9 @@ else()
   file(GLOB solution_SRC CONFIGURE_DEPENDS "src/solution/*.cpp")
   set(solution_INCLUDE include/solution/)
 endif()
-add_library(solution SHARED ${solution_SRC})
+add_library(solution SHARED ${solution_SRC}
+        src/solution/Point.cpp
+        src/solution/Point.h)
 target_include_directories(solution PRIVATE
   ${solution_INCLUDE}
   include/backend_interface/

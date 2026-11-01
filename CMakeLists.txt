@@ -37,7 +37,9 @@ else()
 endif()
 add_library(solution SHARED ${solution_SRC}
         src/solution/Point.cpp
-        src/solution/Point.h)
+        src/solution/Point.h
+        src/solution/MyQueue.cpp
+        src/solution/MyQueue.h)
 target_include_directories(solution PRIVATE
   ${solution_INCLUDE}
   include/backend_interface/

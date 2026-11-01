@@ -4,7 +4,9 @@
 #include <rclcpp_components/register_node_macro.hpp>
 #include <std_msgs/msg/int8.hpp>
 #include <std_msgs/msg/u_int16.hpp>
+#include <queue>
 
+#include "MyQueue.h"
 #include "Point.h"
 
 namespace solution {
@@ -31,13 +33,29 @@ public:
     control_motor1 = create_publisher<std_msgs::msg::Int8>("motor_1/control", rclcpp::QoS(rclcpp::KeepLast(10)).reliable().transient_local());
     control_motor2 = create_publisher<std_msgs::msg::Int8>("motor_2/control", rclcpp::QoS(rclcpp::KeepLast(10)).reliable().transient_local());
 
-    //podmiana punktu kiedy pojawi się nowy
+    //podmiana punktu kiedy pojawi się nowy i dodanie do kolejki
     _target = create_subscription<geometry_msgs::msg::Point>("target", rclcpp::QoS(rclcpp::KeepLast(10)).reliable().transient_local(),
       [this](const geometry_msgs::msg::Point::SharedPtr p) {
         RCLCPP_INFO(get_logger(), "Target: (%g, %g, %g)", p->x, p->y, p->z);
         point.setPoint(p->x, p->y, p->z);
+        points.push(Point(p->x, p->y, p->z));
       });
 
+    //można zmienić wersje sterowania silnikami
+//    zad2_3();
+    zad4();
+  }
+
+private:
+  MyQueue points;
+  Point point;
+  rclcpp::Publisher<std_msgs::msg::Int8>::SharedPtr control_motor1;
+  rclcpp::Publisher<std_msgs::msg::Int8>::SharedPtr control_motor2;
+  rclcpp::Subscription<std_msgs::msg::UInt16>::SharedPtr encoder_motor1;
+  rclcpp::Subscription<std_msgs::msg::UInt16>::SharedPtr encoder_motor2;
+  rclcpp::Subscription<geometry_msgs::msg::Point>::SharedPtr _target;
+
+  void zad2_3() {
     //start silników
     encoder_motor1 = create_subscription<std_msgs::msg::UInt16>("motor_1/encoder", rclcpp::SensorDataQoS(),
       [this](const std_msgs::msg::UInt16::SharedPtr rad) -> void {
@@ -50,13 +68,20 @@ public:
     });
   }
 
-private:
-  Point point = Point();
-  rclcpp::Publisher<std_msgs::msg::Int8>::SharedPtr control_motor1;
-  rclcpp::Publisher<std_msgs::msg::Int8>::SharedPtr control_motor2;
-  rclcpp::Subscription<std_msgs::msg::UInt16>::SharedPtr encoder_motor1;
-  rclcpp::Subscription<std_msgs::msg::UInt16>::SharedPtr encoder_motor2;
-  rclcpp::Subscription<geometry_msgs::msg::Point>::SharedPtr _target;
+  void zad4() {
+    //start silników
+    encoder_motor1 = create_subscription<std_msgs::msg::UInt16>("motor_1/encoder", rclcpp::SensorDataQoS(),
+      [this](const std_msgs::msg::UInt16::SharedPtr rad) -> void {
+        startMotor(rad->data, points.front().getRadiusXY(), SCALE1, control_motor1, 1);
+        if (points.checkXY(rad->data)) {RCLCPP_INFO(get_logger(), "M1!!!");} //info kiedy silnik jest w granicy błędu
+    });
+
+    encoder_motor2 = create_subscription<std_msgs::msg::UInt16>("motor_2/encoder", rclcpp::SensorDataQoS(),
+      [this](const std_msgs::msg::UInt16::SharedPtr rad) -> void {
+        startMotor(rad->data, points.front().getRadiusXZ(), SCALE2, control_motor2, 2);
+        if (points.checkXZ(rad->data)) {RCLCPP_INFO(get_logger(), "M2 !!!");}//info kiedy odczyt jest w granicy błędu
+    });
+  }
 
   void startMotor(
     const int rad1, //kąt aktualny
@@ -73,12 +98,7 @@ private:
         else {msg.data = CHAR (rDif * scale);}
 
         control->publish(msg);
-        RCLCPP_INFO(get_logger(), "%d t: (%d),\t Pos: (%d),\t Dif: (%d)\t (%d),\t Set: (%d)", id, rad2, rad1, dif, rDif, msg.data);
-  }
-
-
-  void test () {
-    RCLCPP_INFO(get_logger(), "point: (%g, %g, %g), radiusXY: (%d), radiusXZ: (%d)", point.getX(), point.getY(), point.getZ(), point.getRadiusXY(), point.getRadiusXZ());
+        RCLCPP_INFO(get_logger(), "%d (%d):\t Pos: (%d),\t Dif: (%d) (%d),\t Set: (%d)", id, rad2, rad1, dif, rDif, msg.data);
   }
 };
 }  // namespace solution

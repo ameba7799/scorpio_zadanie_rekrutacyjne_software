@@ -31,20 +31,23 @@ public:
     control_motor1 = create_publisher<std_msgs::msg::Int8>("motor_1/control", rclcpp::QoS(rclcpp::KeepLast(10)).reliable().transient_local());
     control_motor2 = create_publisher<std_msgs::msg::Int8>("motor_2/control", rclcpp::QoS(rclcpp::KeepLast(10)).reliable().transient_local());
 
+    //podmiana punktu kiedy pojawi się nowy
     _target = create_subscription<geometry_msgs::msg::Point>("target", rclcpp::QoS(rclcpp::KeepLast(10)).reliable().transient_local(),
       [this](const geometry_msgs::msg::Point::SharedPtr p) {
         RCLCPP_INFO(get_logger(), "Target: (%g, %g, %g)", p->x, p->y, p->z);
         point.setPoint(p->x, p->y, p->z);
-
-        encoder_motor1 = create_subscription<std_msgs::msg::UInt16>("motor_1/encoder", rclcpp::SensorDataQoS(),
-          [this](const std_msgs::msg::UInt16::SharedPtr rad) -> void {
-            startMotor(rad->data, point.getRadiusXY(), SCALE1, control_motor1, 1);
-        });
-        encoder_motor2 = create_subscription<std_msgs::msg::UInt16>("motor_2/encoder", rclcpp::SensorDataQoS(),
-          [this](const std_msgs::msg::UInt16::SharedPtr rad) -> void {
-            startMotor(rad->data, point.getRadiusXZ(), SCALE2, control_motor2, 2);
-        });
       });
+
+    //start silników
+    encoder_motor1 = create_subscription<std_msgs::msg::UInt16>("motor_1/encoder", rclcpp::SensorDataQoS(),
+      [this](const std_msgs::msg::UInt16::SharedPtr rad) -> void {
+        startMotor(rad->data, point.getRadiusXY(), SCALE1, control_motor1, 1);
+    });
+
+    encoder_motor2 = create_subscription<std_msgs::msg::UInt16>("motor_2/encoder", rclcpp::SensorDataQoS(),
+      [this](const std_msgs::msg::UInt16::SharedPtr rad) -> void {
+        startMotor(rad->data, point.getRadiusXZ(), SCALE2, control_motor2, 2);
+    });
   }
 
 private:
